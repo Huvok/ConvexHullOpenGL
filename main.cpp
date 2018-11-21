@@ -30,6 +30,7 @@
 #include <iterator>
 #include <complex>
 #include <fstream>
+#include <time.h>
 
 #define FOR(i, a, b) for(ll i=ll(a); i<ll(b); i++)
 #define ROF(i, a, b) for(ll i=ll(a); i>=ll(b); i--)
@@ -87,7 +88,7 @@ struct Polygon {
     vector<Point> v;
 };
 
-vector<obj> points;
+vector<Point> points;
 obj sphere;
 
 void processVertex(string line, obj *object) {
@@ -201,6 +202,22 @@ void loadObjFiles() {
     }
 }
 
+void generatePoints(int n, int limit) {
+    srand(time(NULL));
+    while (sz(points) < n) {
+        int x = rand() % (limit * 2 + 1);
+        int z = rand() % (limit * 2 + 1);
+        x -= limit;
+        z -= limit;
+        FOR(i, 0, sz(points)) {
+            if (x == points[i].x && z == points[i].z)
+                continue;
+        }
+
+        points.pb(Point(x, 0, z));
+    }
+}
+
 void drawObj(obj * object) {
     FOR(i, 0, sz(object->f)) {
         if (sz(object->f[i].vidx) == 3) {
@@ -233,13 +250,17 @@ void display(void)
 
     glLoadIdentity();
 
-    gluLookAt(  0.0f, 10.0f, 15.0f,
+    gluLookAt(  0.0f, 100.0f, 0.1f,
                 0.0f, 0.0f,  0.0f,
                 0.0f, 1.0f,  0.0f);
 
-    glPushMatrix();
-    drawObj(&sphere);
-    glPopMatrix();
+    FOR(i, 0, sz(points)) {
+        glPushMatrix();
+        //cout << points[i].x << " " << points[i].y << endl;
+        glTranslatef(points[i].x, points[i].y, points[i].z);
+        drawObj(&sphere);
+        glPopMatrix();
+    }
 
     angle += 1.;
 
@@ -254,7 +275,7 @@ void reshape(int w, int h)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glViewport(0, 0, w, h);
-	gluPerspective(45.0f, ratio, 0.1f, 100.0f);
+	gluPerspective(45.0f, ratio, 0.1f, 150.0f);
 	glMatrixMode(GL_MODELVIEW);
 }
 
@@ -275,9 +296,10 @@ int main(int argc, char** argv)
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowSize(500, 500);
     glutInitWindowPosition(100, 100);
-    glutCreateWindow("3D Modelling");
+    glutCreateWindow("Convex Hull Visualization");
     glEnable(GL_DEPTH_TEST);
     loadObjFiles();
+    generatePoints(50, 30);
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
