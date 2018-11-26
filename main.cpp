@@ -44,6 +44,10 @@
 #define sz(x) (ll)(x).size()
 #define endl '\n'
 
+enum cameraRotation {RCCW, RCW};
+enum uiParameters {REGENERATE};
+
+
 using namespace std;
 
 typedef long long ll;
@@ -53,8 +57,10 @@ typedef vector<ii> vii;
 using namespace std;
 
 float angle = 0.0f;
+float speed = 0.0f;
 float mouseX = 0.0f;
 float mouseY = 0.0f;
+float camRotZ = 0.0f;
 
 
 struct vertex {
@@ -155,14 +161,6 @@ rgb processColor(string line) {
     return ret;
 }
 
-void processMouseMove(int x, int y) {
-    // We limit the magnitude of the reported motion to prevent loosing the scene in view.
-    mouseX = x * .01;
-    mouseY = y * .01;
-    glutPostRedisplay();
-}
-
-
 
 string trim(string str) {
     int l = 0, r = str.size() - 1;
@@ -183,7 +181,7 @@ void loadObjFiles() {
     ifstream inFile;
 
     FOR(i, 0, sz(files)) {
-        string filePath = "C:\\Users\\hgarc\\GitHub\\ConvexHullOpenGL\\" + files[i];
+        string filePath = "/home/irvel/ConvexHullOpenGL/" + files[i];
         obj *object;
         if (i == 0)
             object = &sphere;
@@ -225,7 +223,6 @@ void generatePoints(int n, int limit) {
             if (x == points[i].x && z == points[i].z)
                 continue;
         }
-
         points.pb(Point(x, 0, z));
     }
 }
@@ -262,8 +259,8 @@ void display(void)
 
     glLoadIdentity();
     // Induce a parallax effect correlated with mouse movement.
-    gluLookAt(  0.0f, 100.0f, 0.1f + mouseX,
-                0.0f, 0.0f + mouseY,  0.0f,
+    gluLookAt(  0.0f, 100.0f + mouseX, 0.1f,
+                0.0f + camRotZ, 0.0f ,  0.0f + mouseY,
                 0.0f, 1.0f,  0.0f);
 
     FOR(i, 0, sz(points)) {
@@ -297,7 +294,42 @@ void keyboard (unsigned char key, int x, int y)
         case 27:
             exit(0);
             break;
+        // Press f key to go faster.
+        case 'f':
+            speed += 2.0f;
+            break;
+        // Press s key to go slower.
+        case 's':
+            speed -= 2.0f;
+            break;
         default:
+            break;
+    }
+}
+
+void processMouseMove(int x, int y) {
+    // We limit the magnitude of the reported motion to prevent loosing the scene in view.
+    mouseX = x * .008;
+    mouseY = y * .005;
+    glutPostRedisplay();
+}
+
+void processMainMenu(int option) {
+    switch (option) {
+        case RCW:
+            camRotZ += 1.0f;
+            break;
+        case RCCW:
+            camRotZ -= 1.0f;
+            break;
+    }
+}
+
+void processParamsMenu(int option) {
+    switch (option) {
+        case REGENERATE:
+            points.clear();
+            generatePoints(50, 30);
             break;
     }
 }
@@ -317,6 +349,19 @@ int main(int argc, char** argv)
     glutKeyboardFunc(keyboard);
     glutPassiveMotionFunc(processMouseMove);
     glutIdleFunc(display);
+
+    // Create UI Menus.
+    int paramsMenu = glutCreateMenu(processParamsMenu);
+    glutAddMenuEntry("Regenerate Points", REGENERATE);
+
+    int mainMenu = glutCreateMenu(processMainMenu);
+    // Add options for controlling camera rotation.
+    glutAddMenuEntry("Rotate View Clockwise", RCW);
+    glutAddMenuEntry("Rotate View Counter-Clockwise", RCCW);
+    glutAddSubMenu("Adjust Parameters", paramsMenu);
+
+    // Display UI menus with mouse right click.
+    glutAttachMenu(GLUT_RIGHT_BUTTON);
     glutMainLoop();
     return 0;
 }
