@@ -53,6 +53,9 @@ typedef vector<ii> vii;
 using namespace std;
 
 float angle = 0.0f;
+float mouseX = 0.0f;
+float mouseY = 0.0f;
+
 
 struct vertex {
     double x, y, z;
@@ -152,6 +155,15 @@ rgb processColor(string line) {
     return ret;
 }
 
+void processMouseMove(int x, int y) {
+    // We limit the magnitude of the reported motion to prevent loosing the scene in view.
+    mouseX = x * .01;
+    mouseY = y * .01;
+    glutPostRedisplay();
+}
+
+
+
 string trim(string str) {
     int l = 0, r = str.size() - 1;
     while (l < r &&
@@ -249,9 +261,9 @@ void display(void)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glLoadIdentity();
-
-    gluLookAt(  0.0f, 100.0f, 0.1f,
-                0.0f, 0.0f,  0.0f,
+    // Induce a parallax effect correlated with mouse movement.
+    gluLookAt(  0.0f, 100.0f, 0.1f + mouseX,
+                0.0f, 0.0f + mouseY,  0.0f,
                 0.0f, 1.0f,  0.0f);
 
     FOR(i, 0, sz(points)) {
@@ -303,6 +315,7 @@ int main(int argc, char** argv)
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
+    glutPassiveMotionFunc(processMouseMove);
     glutIdleFunc(display);
     glutMainLoop();
     return 0;
