@@ -47,6 +47,7 @@ float manualZoom = 0.0f;
 const int windowHeight = 800;
 const int windowWidth = 800;
 int numPoints = 50;
+bool autodrive = false;
 
 struct Vertex {
     double x, y, z;
@@ -99,7 +100,7 @@ int currentPoint = 0;
 
 
 void drawLines(){
-    glLineWidth(2.5);
+    glLineWidth(2.8);
     glBegin(GL_LINES);
     glColor3f(1.0f, 1.0f, 1.0f);
 
@@ -318,9 +319,7 @@ void prepareGrahamScan() {
     auto minPointIter = std::min_element(points.begin(), points.end());
     // Swap point with the first one.
     std::iter_swap(points.begin(), minPointIter);
-
     Point pivot = points.front();
-    // points.pop_back();
 
     // Custom function to compare by polar angle. It's optimized so that
     // we don't actually have to compute the angle itself.
@@ -341,6 +340,7 @@ void prepareGrahamScan() {
     currentPoint = 3;
 }
 
+// Perform a step in selecting the next vertex of the hull.
 void doGrahamScanStep() {
     Point top = hull.back();
     hull.pop_back();
@@ -427,11 +427,14 @@ void drawUiText() {
     setOrthographicProjection();
     glColor3f(1.0f, 1.0f, 0.8f);
     char s[100];
-    if (currentPoint < points.size()) {
+    if (autodrive && currentPoint < points.size()) {
+        sprintf(s,"Autodrive Mode.\n Scanned %d points out of %zu.", currentPoint, points.size());
+    }
+    else if (currentPoint < points.size()) {
         sprintf(s,"Press 's' to perform a step in the algorithm.\n Scanned %d points out of %zu.", currentPoint, points.size());
     }
     else {
-        sprintf(s,"Finished! Scanned %d points out of %zu. Right-click to restart.", currentPoint, points.size());
+        sprintf(s,"Finished! Scanned %d points out of %zu. Press 'r' to restart.", currentPoint, points.size());
 
     }
 
@@ -459,7 +462,9 @@ void display(void) {
         glPopMatrix();
     }
 
-    angle += 1.0;
+    if (autodrive && currentPoint < points.size()) {
+        doGrahamScanStep();
+    }
 
     drawLines();
     drawUiText();
@@ -480,16 +485,28 @@ void reshape(int w, int h) {
 	glMatrixMode(GL_MODELVIEW);
 }
 
+// Restart the program's state.
+void resetState() {
+    points.clear();
+    hull.clear();
+    generatePoints(numPoints, 30);
+    autodrive = false;
+    prepareGrahamScan();
+}
 
 void keyboard (unsigned char key, int x, int y) {
     switch (key) {
         case 'q':
             exit(0);
+        // Enable "Autodrive", automatic run.
+        case 'a':
+            autodrive = true;
+            break;
         case 'i':
-            manualZoom += 2.0f;
+            manualZoom -= 2.0f;
             break;
         case 'o':
-            manualZoom -= 2.0f;
+            manualZoom += 2.0f;
             break;
         case 's':
             if (currentPoint < points.size()) {
@@ -497,7 +514,7 @@ void keyboard (unsigned char key, int x, int y) {
             }
             break;
         case 'r':
-            doGrahamScanStep();
+            resetState();
             break;
         default:
             break;
@@ -520,14 +537,6 @@ void processMainMenu(int option) {
             camRotZ -= 1.0f;
             break;
     }
-}
-
-// Restart the program's state.
-void resetState() {
-    points.clear();
-    hull.clear();
-    generatePoints(numPoints, 30);
-    prepareGrahamScan();
 }
 
 // Configure program's execution parameters.
