@@ -90,25 +90,25 @@ int aux = 0;
 
 
 void drawLines(){
-    
+
     int longitudDePuntos = puntosParaAlgoritmo.size();
     glLineWidth(2.5);
     glBegin(GL_LINES);
     glColor3f(1.0f, 1.0f, 1.0f);
-    
+
     cout << longitudDePuntos << endl;
-    
+
     for (int i = 0; i < longitudDePuntos-3; i++) {
         glVertex3f((float)puntosParaAlgoritmo[i].x, 0.0f, (float)puntosParaAlgoritmo[i].z);
         glVertex3f((float)puntosParaAlgoritmo[i+1].x, 0.0f, (float)puntosParaAlgoritmo[i+1].z);
     }
- 
+
     glColor3f(1.0f, 0.0f, 0.0f);
     glVertex3f((float)puntosParaAlgoritmo[aux-3].x, 0.0f, (float)puntosParaAlgoritmo[aux-3].z);
     glVertex3f((float)puntosParaAlgoritmo[aux-2].x, 0.0f, (float)puntosParaAlgoritmo[aux-2].z);
     glVertex3f((float)puntosParaAlgoritmo[aux-2].x, 0.0f, (float)puntosParaAlgoritmo[aux-2].z);
     glVertex3f((float)puntosParaAlgoritmo[aux-1].x, 0.0f, (float)puntosParaAlgoritmo[aux-1].z);
-    
+
     glEnd();
     glFlush();
 }
@@ -182,7 +182,7 @@ string trim(string str) {
     while (l < r &&
            (str[r] == ' ' || str[r] == '\t'))
         r--;
-    
+
     return str.substr(l, r - l + 1);
 }
 
@@ -201,7 +201,7 @@ void loadObjFiles() {
             cout << "Unable to open file" << endl;
             return;
         }
-        
+
         rgb c;
         while (getline(inFile, str)) {
             if (str.size() == 0)
@@ -217,7 +217,7 @@ void loadObjFiles() {
                 processFace(str, c, object);
             }
         }
-        
+
         inFile.close();
     }
 }
@@ -235,6 +235,22 @@ void generatePoints(int n, int limit) {
         }
         points.push_back(Point(x, 0, z));
     }
+}
+
+// Generates obj file for convex hull
+void generateOutputFile() {
+
+    ofstream output;
+    output.open("output.obj");
+    output << "rgb " <<  << " 0.0 " << puntosParaAlgoritmo[i].z << endl; glColor3f(c.r, c.g, c.b);
+
+    for(int i = 1; i <= puntosParaAlgoritmo.size(); i++){
+        output << "v " << puntosParaAlgoritmo[i].x << " 0.0 " << puntosParaAlgoritmo[i].z << endl;
+        output << "v " << puntosParaAlgoritmo[i+1].x << " 0.0 " << puntosParaAlgoritmo[i+1].z << endl;
+        output << "f " << i << " " << (i+1) << endl;
+    }
+
+    output.close();
 }
 
 void drawObj(Object * object) {
@@ -266,7 +282,7 @@ void drawObj(Object * object) {
 void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
+
     glLoadIdentity();
     // Induce a parallax effect correlated with mouse movement.
     gluLookAt(  0.0f, 100.0f + mouseX, 0.1f,
@@ -280,15 +296,15 @@ void display(void)
         drawObj(&sphere);
         glPopMatrix();
     }
-    
+
     angle += 1.0;
-    
+
     if(aux > 0){
         drawLines();
     }
 
     glutSwapBuffers();
-    
+
 }
 
 void reshape(int w, int h) {
@@ -362,7 +378,7 @@ void processParamsMenu(int option) {
         case REGENERATE:
             points.clear();
             generatePoints(50, 30);
-            
+
             break;
     }
 }
@@ -377,23 +393,23 @@ int main(int argc, char** argv)
     glEnable(GL_DEPTH_TEST);
     loadObjFiles();
     generatePoints(50, 30);
-    
+
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
     glutPassiveMotionFunc(processMouseMove);
     glutIdleFunc(display);
-    
+
     // Create UI Menus.
     int paramsMenu = glutCreateMenu(processParamsMenu);
     glutAddMenuEntry("Regenerate Points", REGENERATE);
-    
+
     int mainMenu = glutCreateMenu(processMainMenu);
     // Add options for controlling camera rotation.
     glutAddMenuEntry("Rotate View Clockwise", RCW);
     glutAddMenuEntry("Rotate View Counter-Clockwise", RCCW);
     glutAddSubMenu("Adjust Parameters", paramsMenu);
-    
+
     // Display UI menus with mouse right click.
     glutAttachMenu(GLUT_RIGHT_BUTTON);
     glutMainLoop();
