@@ -126,7 +126,6 @@ void generateOutputFile(){
 
     ofstream output;
     output.open("output.obj");
-    output << "rgb " <<  << " 0.0 " << puntosParaAlgoritmo[i].z << endl; glColor3f(c.r, c.g, c.b);
 
     for(int i = 1; i <= puntosParaAlgoritmo.size(); i++){
         output << "v " << puntosParaAlgoritmo[i].x << " 0.0 " << puntosParaAlgoritmo[i].z << endl;
