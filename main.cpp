@@ -43,6 +43,7 @@ float speed = 0.0f;
 float mouseX = 0.0f;
 float mouseY = 0.0f;
 float camRotZ = 0.0f;
+float manualZoom = 0.0f;
 const int windowHeight = 800;
 const int windowWidth = 800;
 int numPoints = 50;
@@ -446,7 +447,7 @@ void display(void) {
 
     glLoadIdentity();
     // Induce a parallax effect correlated with mouse movement.
-    gluLookAt(  0.0f, 100.0f + mouseX, 0.1f,
+    gluLookAt(  0.0f, 100.0f + mouseX + manualZoom, 0.1f,
                 0.0f + camRotZ, 0.0f ,  0.0f + mouseY,
                 0.0f, 1.0f,  0.0f);
 
@@ -484,9 +485,11 @@ void keyboard (unsigned char key, int x, int y) {
     switch (key) {
         case 'q':
             exit(0);
-        // Press f key to go faster.
-        case 'f':
-            speed += 2.0f;
+        case 'i':
+            manualZoom += 2.0f;
+            break;
+        case 'o':
+            manualZoom -= 2.0f;
             break;
         case 's':
             if (currentPoint < points.size()) {
@@ -597,7 +600,7 @@ int main(int argc, char** argv) {
     // Add options for controlling camera rotation.
     glutAddMenuEntry("Rotate View Clockwise", CW);
     glutAddMenuEntry("Rotate View Counter-Clockwise", CCW);
-    glutAddSubMenu("Adjust Parameters", paramsMenu);
+    glutAddSubMenu("Adjust Parameters / Restart", paramsMenu);
 
     // Display UI menus with mouse right click.
     glutAttachMenu(GLUT_RIGHT_BUTTON);
