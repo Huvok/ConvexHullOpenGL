@@ -21,34 +21,21 @@
 #include <map>
 #include <functional>
 #include <queue>
-#include <bitset>
 #include <sstream>
 #include <set>
 #include <iomanip>
 #include <string.h>
 #include <limits.h>
 #include <iterator>
-#include <complex>
 #include <fstream>
 #include <time.h>
+using namespace std;
 
-#define FOR(i, a, b) for(ll i=ll(a); i<ll(b); i++)
-#define ROF(i, a, b) for(ll i=ll(a); i>=ll(b); i--)
-#define pb push_back
-#define mp make_pair
-#define lld I64d
-#define all(a) (a).begin(), (a).end()
-#define sync ios_base::sync_with_stdio(false); cin.tie(NULL); cout.tie(NULL)
-#define PI 3.1415926535897932384626433832795
-#define mem(x, val) memset((x), (val), sizeof(x))
-#define sz(x) (ll)(x).size()
-#define endl '\n'
 
 enum cameraRotation {RCCW, RCW};
 enum uiParameters {REGENERATE};
 
 
-using namespace std;
 
 typedef long long ll;
 typedef vector<ll> vi;
@@ -63,10 +50,10 @@ float mouseY = 0.0f;
 float camRotZ = 0.0f;
 
 
-struct vertex {
+struct Vertex {
     double x, y, z;
-    vertex() { x = 0.; y = 0; z = 0; }
-    vertex(double _x, double _y, double _z) { x = _x; y = _y, z = _z; }
+    Vertex() { x = 0.; y = 0; z = 0; }
+    Vertex(double _x, double _y, double _z) { x = _x; y = _y, z = _z; }
 };
 
 struct rgb {
@@ -75,16 +62,16 @@ struct rgb {
     rgb(double _r, double _g, double _b) { r = _r; g = _g; b = _b; }
 };
 
-struct face {
-    vector<ll> vidx;
+struct Face {
+    vector<size_t> vidx;
     rgb color;
-    face() {}
-    face(vi v, rgb c) { vidx = v; color = c; }
+    Face() {}
+    Face(vector<size_t> v, rgb c) { vidx = v; color = c; }
 };
 
-struct obj {
-    vector<vertex> v;
-    vector<face> f;
+struct Object {
+    vector<Vertex> vertices;
+    vector<Face> faces;
 };
 
 struct Point {
@@ -98,67 +85,66 @@ struct Polygon {
 };
 
 vector<Point> points;
-obj sphere;
+Object sphere;
 
-void processVertex(string line, obj *object) {
+void processVertex(string line, Object *object) {
     line = line.substr(2);
     string aux = "";
     double coords[3];
-    ll cur = 0;
-    FOR(i, 0, sz(line)) {
-        if (line[i] == ' ') {
-            coords[cur++] = atof(aux.c_str());
+    int cur = 0;
+    for(const auto& vert : line) {
+        if (vert == ' ') {
+            coords[cur++] = std::stod(aux);
             aux = "";
         }
         else
-            aux += line[i];
+            aux += vert;
     }
-    coords[cur++] = atof(aux.c_str());
-    object->v.pb(vertex(coords[0], coords[1], coords[2]));
+    coords[cur++] = std::stod(aux);
+    object->vertices.push_back(Vertex(coords[0], coords[1], coords[2]));
 }
 
-void processFace(string line, rgb c, obj *object) {
+void processFace(string line, rgb c, Object *object) {
     line = line.substr(2);
     string aux = "";
-    face vface;
-    FOR(i, 0, sz(line)) {
-        if (line[i] == ' ') {
+    Face vface;
+    for (const auto& character : line) {
+        if (character == ' ') {
             string nxtFace = "";
-            FOR(j, 0, sz(aux)) {
-                if (aux[j] == '/')
+            for (const auto& value: aux) {
+                if (value == '/') {
                     break;
-                nxtFace += aux[j];
+                }
+                nxtFace += value;
             }
-            vface.vidx.pb(atoi(nxtFace.c_str()));
+            vface.vidx.push_back(atoi(nxtFace.c_str()));
             aux = "";
         }
-        else
-            aux += line[i];
+        else {
+            aux += character;
+        }
     }
 
-    vface.vidx.pb(atoi(aux.c_str()));
-    object->f.pb(vface);
-    object->f[sz(object->f) - 1].color = c;
+    vface.vidx.push_back(atoi(aux.c_str()));
+    object->faces.push_back(vface);
+    object->faces.back().color = c;
 }
 
 rgb processColor(string line) {
-    rgb ret;
-    double arr[3] = { 0 };
+    vector <double> arr;
     string aux = "";
     line = line.substr(8);
-    ll cur = 0;
-    FOR(i, 0, sz(line)) {
-        if (line[i] == ' ') {
-            arr[cur++] = atof(aux.c_str());
+    for(const auto& digit : line) {
+        if (digit == ' ') {
+            arr.push_back(std::stod(aux));
             aux = "";
         }
         else
-            aux += line[i];
+            aux += digit;
     }
 
-    arr[cur] = atof(aux.c_str());
-    ret.r = arr[0]; ret.g = arr[1]; ret.b = arr[2];
-    return ret;
+    arr.push_back(std::stod(aux));
+    return rgb(arr[0], arr[1], arr[2]);
 }
 
 
@@ -180,12 +166,10 @@ void loadObjFiles() {
     files.push_back("sphere.obj");
     ifstream inFile;
 
-    FOR(i, 0, sz(files)) {
-        string filePath = "/home/irvel/ConvexHullOpenGL/" + files[i];
-        obj *object;
-        if (i == 0)
-            object = &sphere;
-
+    for (const auto& file: files) {
+        string filePath = "/home/irvel/ConvexHullOpenGL/" + file;
+        Object *object;
+        object = &sphere;
         inFile.open(filePath.c_str());
         if (!inFile) {
             cout << "Unable to open file" << endl;
@@ -214,37 +198,37 @@ void loadObjFiles() {
 
 void generatePoints(int n, int limit) {
     srand(time(NULL));
-    while (sz(points) < n) {
+    while (points.size() < n) {
         int x = rand() % (limit * 2 + 1);
         int z = rand() % (limit * 2 + 1);
         x -= limit;
         z -= limit;
-        FOR(i, 0, sz(points)) {
-            if (x == points[i].x && z == points[i].z)
+        for (const auto& point: points) {
+            if (x == point.x && z == point.z)
                 continue;
         }
-        points.pb(Point(x, 0, z));
+        points.push_back(Point(x, 0, z));
     }
 }
 
-void drawObj(obj * object) {
-    FOR(i, 0, sz(object->f)) {
-        if (sz(object->f[i].vidx) == 3) {
+void drawObj(Object * object) {
+    for (const auto& face: object->faces) {
+        if (face.vidx.size() == 3) {
             glBegin(GL_TRIANGLES);
-                rgb c = object->f[i].color;
+                rgb c = face.color;
                 glColor3f(c.r, c.g, c.b);
-                FOR(j, 0, sz(object->f[i].vidx)) {
-                    vertex v = object->v[object->f[i].vidx[j] - 1];
+                for (const auto& vidx: face.vidx) {
+                    Vertex v = object->vertices[vidx - 1];
                     glVertex3f(v.x, v.y, v.z);
                 }
             glEnd();
         }
-        else if (sz(object->f[i].vidx) == 4) {
+        else if (face.vidx.size() == 4) {
             glBegin(GL_QUADS);
-                rgb c = object->f[i].color;
+                rgb c = face.color;
                 glColor3f(c.r, c.g, c.b);
-                FOR(j, 0, sz(object->f[i].vidx)) {
-                    vertex v = object->v[object->f[i].vidx[j] - 1];
+                for (const auto& vidx: face.vidx) {
+                    Vertex v = object->vertices[vidx - 1];
                     glVertex3f(v.x, v.y, v.z);
                 }
 
@@ -263,10 +247,10 @@ void display(void)
                 0.0f + camRotZ, 0.0f ,  0.0f + mouseY,
                 0.0f, 1.0f,  0.0f);
 
-    FOR(i, 0, sz(points)) {
+    for (const auto& point: points) {
         glPushMatrix();
         //cout << points[i].x << " " << points[i].y << endl;
-        glTranslatef(points[i].x, points[i].y, points[i].z);
+        glTranslatef(point.x, point.y, point.z);
         drawObj(&sphere);
         glPopMatrix();
     }
@@ -276,8 +260,7 @@ void display(void)
     glutSwapBuffers();
 }
 
-void reshape(int w, int h)
-{
+void reshape(int w, int h) {
    if (h == 0)
 		h = 1;
 	float ratio =  w * 1.0 / h;
@@ -288,8 +271,7 @@ void reshape(int w, int h)
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void keyboard (unsigned char key, int x, int y)
-{
+void keyboard (unsigned char key, int x, int y) {
     switch (key) {
         case 'q':
             exit(0);
