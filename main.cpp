@@ -1,15 +1,11 @@
-/*
- *
- */
-
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #else
 #include <GL/glut.h>
 #endif
 
-#include <GL/gl.h>
-#include <GL/glu.h>
+//#include <GL/gl.h>
+//#include <GL/glu.h>
 #include <cmath>
 #include <cstdio>
 #include <vector>
@@ -34,7 +30,6 @@ using namespace std;
 
 enum cameraRotation {RCCW, RCW};
 enum uiParameters {REGENERATE};
-
 
 
 typedef long long ll;
@@ -86,6 +81,37 @@ struct Polygon {
 
 vector<Point> points;
 Object sphere;
+
+vector<Point> puntosParaAlgoritmo;
+Point point(5,0,5);
+Point point2(2,0,2);
+Point point3(3,0,4);
+int aux = 0;
+
+
+void drawLines(){
+    
+    int longitudDePuntos = puntosParaAlgoritmo.size();
+    glLineWidth(2.5);
+    glBegin(GL_LINES);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    cout << longitudDePuntos << endl;
+    
+    for (int i = 0; i < longitudDePuntos-3; i++) {
+        glVertex3f((float)puntosParaAlgoritmo[i].x, 0.0f, (float)puntosParaAlgoritmo[i].z);
+        glVertex3f((float)puntosParaAlgoritmo[i+1].x, 0.0f, (float)puntosParaAlgoritmo[i+1].z);
+    }
+ 
+    glColor3f(1.0f, 0.0f, 0.0f);
+    glVertex3f((float)puntosParaAlgoritmo[aux-3].x, 0.0f, (float)puntosParaAlgoritmo[aux-3].z);
+    glVertex3f((float)puntosParaAlgoritmo[aux-2].x, 0.0f, (float)puntosParaAlgoritmo[aux-2].z);
+    glVertex3f((float)puntosParaAlgoritmo[aux-2].x, 0.0f, (float)puntosParaAlgoritmo[aux-2].z);
+    glVertex3f((float)puntosParaAlgoritmo[aux-1].x, 0.0f, (float)puntosParaAlgoritmo[aux-1].z);
+    
+    glEnd();
+    glFlush();
+}
 
 void processVertex(string line, Object *object) {
     line = line.substr(2);
@@ -152,11 +178,11 @@ string trim(string str) {
     int l = 0, r = str.size() - 1;
     while (l < r &&
            (str[l] == ' ' || str[l] == '\t'))
-            l++;
+        l++;
     while (l < r &&
            (str[r] == ' ' || str[r] == '\t'))
-            r--;
-
+        r--;
+    
     return str.substr(l, r - l + 1);
 }
 
@@ -175,7 +201,7 @@ void loadObjFiles() {
             cout << "Unable to open file" << endl;
             return;
         }
-
+        
         rgb c;
         while (getline(inFile, str)) {
             if (str.size() == 0)
@@ -191,7 +217,7 @@ void loadObjFiles() {
                 processFace(str, c, object);
             }
         }
-
+        
         inFile.close();
     }
 }
@@ -240,7 +266,7 @@ void drawObj(Object * object) {
 void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+    
     glLoadIdentity();
     // Induce a parallax effect correlated with mouse movement.
     gluLookAt(  0.0f, 100.0f + mouseX, 0.1f,
@@ -254,10 +280,15 @@ void display(void)
         drawObj(&sphere);
         glPopMatrix();
     }
-
-    angle += 1.;
+    
+    angle += 1.0;
+    
+    if(aux > 0){
+        drawLines();
+    }
 
     glutSwapBuffers();
+    
 }
 
 void reshape(int w, int h) {
@@ -271,6 +302,18 @@ void reshape(int w, int h) {
 	glMatrixMode(GL_MODELVIEW);
 }
 
+void populate() {
+    puntosParaAlgoritmo = {};
+    aux += 3;
+    if(aux > points.size()){
+        aux = points.size();
+    }
+    for(int i=0; i < aux; i++) {
+        puntosParaAlgoritmo.push_back( points[i]);
+    }
+    display();
+}
+
 void keyboard (unsigned char key, int x, int y) {
     switch (key) {
         case 'q':
@@ -279,9 +322,14 @@ void keyboard (unsigned char key, int x, int y) {
         case 'f':
             speed += 2.0f;
             break;
-        // Press s key to go slower.
+            // Press s key to go slower.
         case 's':
             speed -= 2.0f;
+            break;
+        case 'p':
+            if(puntosParaAlgoritmo.size() < points.size()){
+                populate();
+            }
             break;
         default:
             break;
@@ -306,11 +354,15 @@ void processMainMenu(int option) {
     }
 }
 
+
+
+// hacer restart del convex hull
 void processParamsMenu(int option) {
     switch (option) {
         case REGENERATE:
             points.clear();
             generatePoints(50, 30);
+            
             break;
     }
 }
@@ -325,22 +377,23 @@ int main(int argc, char** argv)
     glEnable(GL_DEPTH_TEST);
     loadObjFiles();
     generatePoints(50, 30);
+    
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
     glutPassiveMotionFunc(processMouseMove);
     glutIdleFunc(display);
-
+    
     // Create UI Menus.
     int paramsMenu = glutCreateMenu(processParamsMenu);
     glutAddMenuEntry("Regenerate Points", REGENERATE);
-
+    
     int mainMenu = glutCreateMenu(processMainMenu);
     // Add options for controlling camera rotation.
     glutAddMenuEntry("Rotate View Clockwise", RCW);
     glutAddMenuEntry("Rotate View Counter-Clockwise", RCCW);
     glutAddSubMenu("Adjust Parameters", paramsMenu);
-
+    
     // Display UI menus with mouse right click.
     glutAttachMenu(GLUT_RIGHT_BUTTON);
     glutMainLoop();
