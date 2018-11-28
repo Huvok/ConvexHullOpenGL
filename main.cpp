@@ -27,6 +27,17 @@
 #include <time.h>
 using namespace std;
 
+#define FOR(i, a, b) for(ll i=ll(a); i<ll(b); i++)
+#define ROF(i, a, b) for(ll i=ll(a); i>=ll(b); i--)
+#define pb push_back
+#define mp make_pair
+#define lld I64d
+#define all(a) (a).begin(), (a).end()
+#define sync ios_base::sync_with_stdio(false); cin.tie(NULL); cout.tie(NULL)
+#define PI 3.1415926535897932384626433832795
+#define mem(x, val) memset((x), (val), sizeof(x))
+#define sz(x) (ll)(x).size()
+#define endl '\n'
 
 enum Rotation {CCW, CW, COLLINEAR};
 enum uiParameters {REGENERATE, INC_POINTS, DEC_POINTS};
@@ -62,10 +73,10 @@ struct rgb {
 };
 
 struct Face {
-    vector<size_t> vidx;
+    vi vidx;
     rgb color;
     Face() {}
-    Face(vector<size_t> v, rgb c) { vidx = v; color = c; }
+    Face(vi v, rgb c) { vidx = v; color = c; }
 };
 
 struct Object {
@@ -98,6 +109,7 @@ Object sphere;
 vector<Point> hull;
 int currentPoint = 0;
 
+Object ch;
 
 void drawLines(){
     glLineWidth(2.8);
@@ -142,13 +154,13 @@ void processVertex(string line, Object *object) {
     int cur = 0;
     for(const auto& vert : line) {
         if (vert == ' ') {
-            coords[cur++] = std::stod(aux);
+            coords[cur++] = atof(aux.c_str());
             aux = "";
         }
         else
             aux += vert;
     }
-    coords[cur++] = std::stod(aux);
+    coords[cur++] = atof(aux.c_str());
     object->vertices.push_back(Vertex(coords[0], coords[1], coords[2]));
 }
 
@@ -184,14 +196,14 @@ rgb processColor(string line) {
     line = line.substr(8);
     for(const auto& digit : line) {
         if (digit == ' ') {
-            arr.push_back(std::stod(aux));
+            arr.push_back(atof(aux.c_str()));
             aux = "";
         }
         else
             aux += digit;
     }
 
-    arr.push_back(std::stod(aux));
+    arr.push_back(atof(aux.c_str()));
     return rgb(arr[0], arr[1], arr[2]);
 }
 
@@ -215,7 +227,7 @@ void loadObjFiles() {
     ifstream inFile;
 
     for (const auto& file: files) {
-        string filePath = "/home/irvel/ConvexHullOpenGL/" + file;
+        string filePath = "C:\\Users\\hgarc\\GitHub\\ConvexHullOpenGL\\" + file;
         Object *object;
         object = &sphere;
         inFile.open(filePath.c_str());
@@ -251,27 +263,12 @@ void generatePoints(int n, int limit) {
         int z = rand() % (limit * 2 + 1);
         x -= limit;
         z -= limit;
-        for (const auto& point: points) {
-            if (x == point.x && z == point.z)
+        FOR(i, 0, sz(points)) {
+            if (x == points[i].x && z == points[i].z)
                 continue;
         }
         points.push_back(Point(x, 0, z));
     }
-}
-
-// Generates obj file for convex hull.
-void generateOutputFile() {
-
-    ofstream output;
-    output.open("output.obj");
-
-    for(int i = 1; i <= hull.size(); i++){
-        output << "v " << hull[i].x << " 0.0 " << hull[i].z << endl;
-        output << "v " << hull[i+1].x << " 0.0 " << hull[i+1].z << endl;
-        output << "f " << i << " " << (i+1) << endl;
-    }
-
-    output.close();
 }
 
 Rotation determineRotation(Point a, Point b, Point c) {
@@ -298,8 +295,8 @@ void debugPoints(string msg="") {
         cout << msg << ":  ";
     }
     cout << "[";
-    for (auto point: points) {
-        cout << "(" << point.x << ", " << point.z << ") ";
+    FOR(i, 0, sz(points)) {
+        cout << "(" << points[i].x << ", " << points[i].z << ") ";
     }
     cout << "]\n";
 }
@@ -309,8 +306,8 @@ void debugHull(string msg="") {
         cout << msg << ":  ";
     }
     cout << "[";
-    for (auto point: hull) {
-        cout << "(" << point.x << ", " << point.z << ") ";
+    FOR(i, 0, sz(hull)) {
+        cout << "(" << points[i].x << ", " << points[i].z << ") ";
     }
     cout << "]\n";
 }
@@ -340,7 +337,13 @@ void prepareGrahamScan() {
     currentPoint = 3;
 }
 
-// Perform a step in selecting the next vertex of the hull.
+void pushFace(Object &object, int n, rgb c) {
+    vi v;
+    FOR(i, 0, n)
+        v.pb(sz(object.vertices) - n + i + 1);
+    object.faces.pb(Face(v, c));
+}
+
 void doGrahamScanStep() {
     Point top = hull.back();
     hull.pop_back();
@@ -351,6 +354,32 @@ void doGrahamScanStep() {
     hull.push_back(top);
     hull.push_back(points[currentPoint]);
     currentPoint++;
+
+    if (currentPoint >= sz(points)) {
+        ll n = hull.size();
+        for(int i = 0; i < n - 1; i++){
+            ch.vertices.pb(Vertex(hull[i].x, 0.0, hull[i].z));
+            ch.vertices.pb(Vertex(hull[i + 1].x, 0.0, hull[i + 1].z));
+            pushFace(ch, 2, rgb(0.8, 0.8, 0.8));
+        }
+
+        ch.vertices.pb(Vertex(hull[n - 1].x, 0.0, hull[n - 1].z));
+        ch.vertices.pb(Vertex(hull[0].x, 0.0, hull[0].z));
+        pushFace(ch, 2, rgb(0.8, 0.8, 0.8));
+
+        FOR(i, 0, n) {
+            FOR(j, 0, sz(sphere.faces)) {
+                FOR(k, 0, sz(sphere.faces[j].vidx)) {
+                    double x = sphere.vertices[sphere.faces[j].vidx[k]].x;
+                    double y = sphere.vertices[sphere.faces[j].vidx[k]].y;
+                    double z = sphere.vertices[sphere.faces[j].vidx[k]].z;
+                    ch.vertices.pb(Vertex(x + hull[i].x, y + hull[i].y, z + hull[i].z));
+                }
+
+                pushFace(ch, sz(sphere.faces[j].vidx), rgb(0.8, 0.8, 0.8));
+            }
+        }
+    }
 }
 
 void drawObj(Object * object) {
@@ -434,7 +463,7 @@ void drawUiText() {
         sprintf(s,"Press 's' to perform a step in the algorithm.\n Scanned %d points out of %zu.", currentPoint, points.size());
     }
     else {
-        sprintf(s,"Finished! Scanned %d points out of %zu. Press 'r' to restart.", currentPoint, points.size());
+        sprintf(s,"Finished! Scanned %d points out of %zu. Press 'r' to restart, 'p' to save", currentPoint, points.size());
 
     }
 
@@ -494,6 +523,28 @@ void resetState() {
     prepareGrahamScan();
 }
 
+void saveObj(Object * object, string fileName) {
+    ofstream outFile;
+
+    string filePath = "C:\\Users\\hgarc\\Github\\ConvexHullOpenGL\\" + fileName;
+    outFile.open(filePath.c_str());
+    outFile << fixed << setprecision(6);
+    FOR(i, 0, sz(object->vertices))
+        outFile << "v " << object->vertices[i].x << " " << object->vertices[i].y << " " << object->vertices[i].z << endl;
+
+    outFile << endl;
+    FOR(i, 0, sz(object->faces)) {
+        outFile << "# Color " << object->faces[i].color.r << " " << object->faces[i].color.g << " " << object->faces[i].color.b << endl;
+        outFile << "f ";
+        FOR(j, 0, sz(object->faces[i].vidx))
+            outFile << object->faces[i].vidx[j] << " ";
+        outFile << endl;
+    }
+
+    outFile.close();
+    cout << "Saved object: " << fileName << endl;
+}
+
 void keyboard (unsigned char key, int x, int y) {
     switch (key) {
         case 'q':
@@ -516,6 +567,8 @@ void keyboard (unsigned char key, int x, int y) {
         case 'r':
             resetState();
             break;
+        case 'p':
+            saveObj(&ch, "CH.obj");
         default:
             break;
     }
