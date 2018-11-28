@@ -291,9 +291,8 @@ void reshape(int w, int h)
 void keyboard (unsigned char key, int x, int y)
 {
     switch (key) {
-        case 27:
+        case 'q':
             exit(0);
-            break;
         // Press f key to go faster.
         case 'f':
             speed += 2.0f;
