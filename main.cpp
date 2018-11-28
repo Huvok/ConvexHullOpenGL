@@ -6,7 +6,7 @@
 
 #include <GL/gl.h>
 //#include <GL/glu.h>
-#include <cmath>
+#include <math.h>
 #include <cstdio>
 #include <vector>
 #include <iostream>
@@ -40,7 +40,7 @@ using namespace std;
 #define endl '\n'
 
 enum Rotation {CCW, CW, COLLINEAR};
-enum uiParameters {REGENERATE};
+enum uiParameters {REGENERATE, INC_POINTS, DEC_POINTS};
 
 
 typedef long long ll;
@@ -54,8 +54,10 @@ float speed = 0.0f;
 float mouseX = 0.0f;
 float mouseY = 0.0f;
 float camRotZ = 0.0f;
+float manualZoom = 0.0f;
 const int windowHeight = 800;
 const int windowWidth = 800;
+int numPoints = 50;
 
 struct Vertex {
     double x, y, z;
@@ -441,7 +443,6 @@ void restorePerspectiveProjection() {
 }
 
 
-
 void renderBitmapString(float x, float y, float z,
                         void *font, char *charArray) {
     char *c;
@@ -476,7 +477,7 @@ void display(void) {
 
     glLoadIdentity();
     // Induce a parallax effect correlated with mouse movement.
-    gluLookAt(  0.0f, 100.0f + mouseX, 0.1f,
+    gluLookAt(  0.0f, 100.0f + mouseX + manualZoom, 0.1f,
                 0.0f + camRotZ, 0.0f ,  0.0f + mouseY,
                 0.0f, 1.0f,  0.0f);
 
@@ -495,6 +496,8 @@ void display(void) {
     glutSwapBuffers();
 
 }
+
+
 
 void reshape(int w, int h) {
    if (h == 0)
@@ -533,9 +536,11 @@ void keyboard (unsigned char key, int x, int y) {
     switch (key) {
         case 'q':
             exit(0);
-        // Press f key to go faster.
-        case 'f':
-            speed += 2.0f;
+        case 'i':
+            manualZoom += 2.0f;
+            break;
+        case 'o':
+            manualZoom -= 2.0f;
             break;
         case 's':
             if (currentPoint < points.size()) {
@@ -571,13 +576,30 @@ void processMainMenu(int option) {
 }
 
 // Restart the program's state.
+void resetState() {
+    points.clear();
+    hull.clear();
+    generatePoints(numPoints, 30);
+    prepareGrahamScan();
+}
+
+// Configure program's execution parameters.
 void processParamsMenu(int option) {
     switch (option) {
         case REGENERATE:
-            points.clear();
-            hull.clear();
-            generatePoints(50, 30);
-            prepareGrahamScan();
+            resetState();
+            break;
+
+        case INC_POINTS:
+            numPoints += 40;
+            numPoints = min(numPoints, 2000);
+            resetState();
+            break;
+
+        case DEC_POINTS:
+            numPoints -= 40;
+            numPoints = max(numPoints, 6);
+            resetState();
             break;
     }
 }
@@ -610,7 +632,7 @@ int main(int argc, char** argv) {
     glEnable(GL_COLOR_MATERIAL);
 
     loadObjFiles();
-    generatePoints(50, 30);
+    generatePoints(numPoints, 30);
     prepareGrahamScan();
 
     // Register Glut callbacks.
@@ -623,12 +645,15 @@ int main(int argc, char** argv) {
     // Create UI Menus.
     int paramsMenu = glutCreateMenu(processParamsMenu);
     glutAddMenuEntry("Regenerate Points", REGENERATE);
+    glutAddMenuEntry("Increase # of Points by 40", INC_POINTS);
+    glutAddMenuEntry("Decrease # of Points by 40", DEC_POINTS);
+
 
     int mainMenu = glutCreateMenu(processMainMenu);
     // Add options for controlling camera rotation.
     glutAddMenuEntry("Rotate View Clockwise", CW);
     glutAddMenuEntry("Rotate View Counter-Clockwise", CCW);
-    glutAddSubMenu("Adjust Parameters", paramsMenu);
+    glutAddSubMenu("Adjust Parameters / Restart", paramsMenu);
 
     // Display UI menus with mouse right click.
     glutAttachMenu(GLUT_RIGHT_BUTTON);
