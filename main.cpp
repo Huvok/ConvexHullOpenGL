@@ -32,7 +32,7 @@
 using namespace std;
 
 
-enum cameraRotation {RCCW, RCW};
+enum Rotation {CCW, CW, COLLINEAR};
 enum uiParameters {REGENERATE};
 
 
@@ -78,6 +78,15 @@ struct Point {
     int x, y, z;
     Point() { x = 0, y = 0, z = 0; }
     Point(int _x, int _y, int _z) { x = _x, y = _y, z = _z; }
+
+    // Choose the smallest point along the y axis,
+    // and use x as a tie-breaker.
+    bool operator < (Point other) {
+        if (this->y != other.y) {
+            return this->y < other.y;
+        }
+        return this->x < other.x;
+    }
 };
 
 struct Polygon {
@@ -211,6 +220,62 @@ void generatePoints(int n, int limit) {
     }
 }
 
+Rotation determineRotation(Point a, Point b, Point c) {
+    int area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    if (area > 0) {
+        return CCW;
+    }
+    else if (area < 0) {
+        return CW;
+    }
+    return COLLINEAR;
+}
+
+// We use the squared Euclidean to keep using integers
+// and avoid computing expensive square roots.
+int squaredEuclidean(Point a, Point b) {
+    int dx = a.x - b.x;
+    int dy = a.y - b.y;
+    return dx * dx + dy * dy;
+}
+
+void grahamScan(vector<Point> points) {
+    auto minPointIter = std::min_element(points.begin(), points.end());
+    // Swap point with the last one.
+    std::iter_swap(points.end(), minPointIter);
+    Point pivot = points.back();
+    points.pop_back();
+
+    // Custom function to compare by polar angle. It's optimized so that
+    // we don't actually have to compute the angle itself.
+    auto polar_comparison = [=](Point a, Point b) {
+        auto rotation = determineRotation(pivot, a, b);
+        if (rotation == COLLINEAR) {
+            return squaredEuclidean(pivot, a) < squaredEuclidean(pivot, b);
+        }
+        return (rotation == CCW);
+    };
+
+    // Sort points w.r.t our selected pivot.
+    std::sort(points.begin(), points.end(), polar_comparison);
+
+    stack<Point> hull;
+    hull.push(points[0]);
+    hull.push(points[1]);
+    hull.push(points[2]);
+    for (int i = 3; i < points.size(); i++) {
+        Point top = hull.top();
+        hull.pop();
+        while (determineRotation(hull.top(), top, points[i]) != CCW) {
+            top = hull.top();
+            hull.pop();
+        }
+        hull.push(top);
+        hull.push(points[i]);
+    }
+    // return hull;
+}
+
 void drawObj(Object * object) {
     for (const auto& face: object->faces) {
         if (face.vidx.size() == 3) {
@@ -297,10 +362,10 @@ void processMouseMove(int x, int y) {
 
 void processMainMenu(int option) {
     switch (option) {
-        case RCW:
+        case CW:
             camRotZ += 1.0f;
             break;
-        case RCCW:
+        case CCW:
             camRotZ -= 1.0f;
             break;
     }
@@ -337,8 +402,8 @@ int main(int argc, char** argv)
 
     int mainMenu = glutCreateMenu(processMainMenu);
     // Add options for controlling camera rotation.
-    glutAddMenuEntry("Rotate View Clockwise", RCW);
-    glutAddMenuEntry("Rotate View Counter-Clockwise", RCCW);
+    glutAddMenuEntry("Rotate View Clockwise", CW);
+    glutAddMenuEntry("Rotate View Counter-Clockwise", CCW);
     glutAddSubMenu("Adjust Parameters", paramsMenu);
 
     // Display UI menus with mouse right click.
