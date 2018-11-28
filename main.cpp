@@ -94,22 +94,18 @@ struct Polygon {
 vector<Point> points;
 obj sphere;
 
-vector<Point> puntosParaAlgoritmo;
-Point point(5,0,5);
-Point point2(2,0,2);
-Point point3(3,0,4);
-int aux = 0;
+vector<Point> puntosParaAlgoritmo; // This will contain the points used to draw the lines.
+int aux = 0; // Helps us control how many points to include in a vector, acts as an index.
 
-
+// Lets us draw line segments between two points. 
+// The last two line segments will be represented with the color red to indicate that those 3 points are the ones currently working with
 void drawLines(){
     
     int longitudDePuntos = puntosParaAlgoritmo.size();
     glLineWidth(2.5);
     glBegin(GL_LINES);
     glColor3f(1.0f, 1.0f, 1.0f);
-    
-    cout << longitudDePuntos << endl;
-    
+        
     for (int i = 0; i < longitudDePuntos-3; i++) {
         glVertex3f((float)puntosParaAlgoritmo[i].x, 0.0f, (float)puntosParaAlgoritmo[i].z);
         glVertex3f((float)puntosParaAlgoritmo[i+1].x, 0.0f, (float)puntosParaAlgoritmo[i+1].z);
@@ -124,6 +120,23 @@ void drawLines(){
     glEnd();
     glFlush();
 }
+
+// Generates obj file for convex hull
+void generateOutputFile(){
+
+    ofstream output;
+    output.open("output.obj");
+    output << "rgb " <<  << " 0.0 " << puntosParaAlgoritmo[i].z << endl; glColor3f(c.r, c.g, c.b);
+
+    for(int i = 1; i <= puntosParaAlgoritmo.size(); i++){
+        output << "v " << puntosParaAlgoritmo[i].x << " 0.0 " << puntosParaAlgoritmo[i].z << endl;
+        output << "v " << puntosParaAlgoritmo[i+1].x << " 0.0 " << puntosParaAlgoritmo[i+1].z << endl;
+        output << "f " << i << " " << (i+1) << endl;
+    }
+
+    output.close();
+}
+
 
 void processVertex(string line, obj *object) {
     line = line.substr(2);
@@ -273,7 +286,6 @@ void drawObj(obj * object) {
                 vertex v = object->v[object->f[i].vidx[j] - 1];
                 glVertex3f(v.x, v.y, v.z);
             }
-            
             glEnd();
         }
     }
@@ -298,7 +310,7 @@ void display(void)
     }
     
     angle += 1.0;
-    
+
     if(aux > 0){
         drawLines();
     }
@@ -319,11 +331,12 @@ void reshape(int w, int h)
     glMatrixMode(GL_MODELVIEW);
 }
 
-
+// Insert points to vector used as input for the drawing of lines
+// Serves as a helper function in order to show the algorithm step by step
 void populate(){
    
     puntosParaAlgoritmo = {};
-    aux+=3;
+    aux+=3; 
     if(aux > points.size()){
         aux = points.size();
     }
@@ -347,11 +360,16 @@ void keyboard (unsigned char key, int x, int y)
         case 's':
             speed -= 2.0f;
             break;
+            // Press p key to advance in the algorithm generation
         case 'p':
             if(puntosParaAlgoritmo.size() < points.size()){
                 populate();
             }
             break;
+            // Press q key and genrate obj for convex hull, then exit the application
+        case 'q':
+            generateOutputFile();
+            exit(0);
         default:
             break;
     }
