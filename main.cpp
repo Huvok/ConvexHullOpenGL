@@ -4,7 +4,7 @@
 #include <GL/glut.h>
 #endif
 
-//#include <GL/gl.h>
+#include <GL/gl.h>
 //#include <GL/glu.h>
 #include <cmath>
 #include <cstdio>
@@ -43,7 +43,8 @@ float speed = 0.0f;
 float mouseX = 0.0f;
 float mouseY = 0.0f;
 float camRotZ = 0.0f;
-
+const int windowHeight = 800;
+const int windowWidth = 800;
 
 struct Vertex {
     double x, y, z;
@@ -351,6 +352,13 @@ void doGrahamScanStep() {
 }
 
 void drawObj(Object * object) {
+    GLfloat shininess[] = { 81.0 };
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat mat_emission[] = {0.3, 0.2, 0.2, 0.0};
+
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+    glMaterialfv(GL_FRONT, GL_EMISSION, mat_emission);
     for (const auto& face: object->faces) {
         if (face.vidx.size() == 3) {
             glBegin(GL_TRIANGLES);
@@ -376,8 +384,64 @@ void drawObj(Object * object) {
     }
 }
 
-void display(void)
-{
+void setOrthographicProjection() {
+    // Switch to projection mode.
+    glMatrixMode(GL_PROJECTION);
+
+    // Save previous matrix which contains settings
+    // for the perspective projection.
+    glPushMatrix();
+
+    // Reset matrix.
+    glLoadIdentity();
+
+    // Set a 2D orthographic projection.
+    gluOrtho2D(0, windowWidth, windowHeight, 0);
+
+    // Switch back to modelview mode.
+    glMatrixMode(GL_MODELVIEW);
+}
+
+void restorePerspectiveProjection() {
+    glMatrixMode(GL_PROJECTION);
+    // Restore previous projection matrix.
+    glPopMatrix();
+    // Get back to modelview mode.
+    glMatrixMode(GL_MODELVIEW);
+}
+
+
+
+void renderBitmapString(float x, float y, float z,
+                        void *font, char *charArray) {
+    char *c;
+    glRasterPos3f(x, y, z);
+    for (c = charArray; *c != '\0'; c++) {
+        glutBitmapCharacter(font, *c);
+    }
+}
+
+
+void drawUiText() {
+    setOrthographicProjection();
+    glColor3f(1.0f, 1.0f, 0.8f);
+    char s[100];
+    if (currentPoint < points.size()) {
+        sprintf(s,"Press 's' to perform a step in the algorithm.\n Scanned %d points out of %zu.", currentPoint, points.size());
+    }
+    else {
+        sprintf(s,"Finished! Scanned %d points out of %zu. Right-click to restart.", currentPoint, points.size());
+
+    }
+
+    glPushMatrix();
+    glLoadIdentity();
+    renderBitmapString(5, 30, 0, GLUT_BITMAP_HELVETICA_18, s);
+    glPopMatrix();
+    restorePerspectiveProjection();
+}
+
+void display(void) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glLoadIdentity();
@@ -397,6 +461,7 @@ void display(void)
     angle += 1.0;
 
     drawLines();
+    drawUiText();
     glutSwapBuffers();
 
 }
@@ -421,11 +486,7 @@ void keyboard (unsigned char key, int x, int y) {
         case 'f':
             speed += 2.0f;
             break;
-            // Press s key to go slower.
         case 's':
-            speed -= 2.0f;
-            break;
-        case 'p':
             if (currentPoint < points.size()) {
                 doGrahamScanStep();
             }
@@ -456,30 +517,50 @@ void processMainMenu(int option) {
     }
 }
 
-
-
-// hacer restart del convex hull
+// Restart the program's state.
 void processParamsMenu(int option) {
     switch (option) {
         case REGENERATE:
             points.clear();
+            hull.clear();
             generatePoints(50, 30);
+            prepareGrahamScan();
             break;
     }
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
-    glutInitWindowSize(500, 500);
-    glutInitWindowPosition(100, 100);
+    glutInitWindowSize(windowWidth, windowHeight);
+    glutInitWindowPosition(300, 300);
     glutCreateWindow("Convex Hull Visualization");
+    glShadeModel (GL_SMOOTH);
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat mat_shininess[] = { 90.0 };
+    GLfloat light_position[] = { 1.0, 1.0, 1.0, 1.0 };
+    glClearColor (0.0, 0.0, 0.0, 0.0);
+    glShadeModel (GL_SMOOTH);
+    GLfloat light_ambient[] = { 0.0, 0.0, 1.0, 1.0};
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+    GLfloat lmodel_ambient[] = { 2.8, 2.8, 2.8, 2.0 };
+    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
+
+    // Enable lighting modes.
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_COLOR_MATERIAL);
+
     loadObjFiles();
     generatePoints(50, 30);
     prepareGrahamScan();
 
+    // Register Glut callbacks.
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
