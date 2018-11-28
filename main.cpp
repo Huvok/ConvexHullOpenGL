@@ -59,6 +59,7 @@ const int windowHeight = 800;
 const int windowWidth = 800;
 int numPoints = 50;
 bool autodrive = false;
+int thickLineAnim = 0;
 
 struct Vertex {
     double x, y, z;
@@ -111,8 +112,13 @@ int currentPoint = 0;
 
 Object ch;
 
-void drawLines(){
-    glLineWidth(2.8);
+void drawLines() {
+    if (thickLineAnim) {
+        glLineWidth(2.8 * thickLineAnim * 2.0);
+    }
+    else {
+        glLineWidth(2.8);
+    }
     glBegin(GL_LINES);
     glColor3f(1.0f, 1.0f, 1.0f);
 
@@ -227,7 +233,7 @@ void loadObjFiles() {
     ifstream inFile;
 
     for (const auto& file: files) {
-        string filePath = "C:\\Users\\hgarc\\GitHub\\ConvexHullOpenGL\\" + file;
+        string filePath = "/home/irvel/ConvexHullOpenGL/" + file;
         Object *object;
         object = &sphere;
         inFile.open(filePath.c_str());
@@ -482,17 +488,21 @@ void display(void) {
     gluLookAt(  0.0f, 100.0f + mouseX + manualZoom, 0.1f,
                 0.0f + camRotZ, 0.0f ,  0.0f + mouseY,
                 0.0f, 1.0f,  0.0f);
-
+    // Draw the loaded obj.
     for (const auto& point: points) {
         glPushMatrix();
-        //cout << points[i].x << " " << points[i].y << endl;
         glTranslatef(point.x, point.y, point.z);
         drawObj(&sphere);
         glPopMatrix();
     }
 
+    // Automatically do the next step in the algorithm.
     if (autodrive && currentPoint < points.size()) {
         doGrahamScanStep();
+        // Used to give a more dramatic appearance to each new edge.
+        if (thickLineAnim == 0) {
+            thickLineAnim = 3;
+        }
     }
 
     drawLines();
