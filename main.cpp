@@ -96,6 +96,7 @@ Point point(5,0,5);
 Point point2(2,0,2);
 Point point3(3,0,4);
 int aux = 0;
+int currentPoint = 0;
 
 
 void drawLines(){
@@ -105,7 +106,7 @@ void drawLines(){
     glBegin(GL_LINES);
     glColor3f(1.0f, 1.0f, 1.0f);
 
-    cout << longitudDePuntos << endl;
+    // cout << longitudDePuntos << endl;
 
     for (int i = 0; i < longitudDePuntos-3; i++) {
         glVertex3f((float)hull[i].x, 0.0f, (float)hull[i].z);
@@ -113,10 +114,10 @@ void drawLines(){
     }
 
     glColor3f(1.0f, 0.0f, 0.0f);
-    glVertex3f((float)hull[aux-3].x, 0.0f, (float)hull[aux-3].z);
-    glVertex3f((float)hull[aux-2].x, 0.0f, (float)hull[aux-2].z);
-    glVertex3f((float)hull[aux-2].x, 0.0f, (float)hull[aux-2].z);
-    glVertex3f((float)hull[aux-1].x, 0.0f, (float)hull[aux-1].z);
+    glVertex3f((float)(hull.end() - 3)->x, 0.0f, (float)(hull.end() - 3)->z);
+    glVertex3f((float)(hull.end() - 2)->x, 0.0f, (float)(hull.end() - 2)->z);
+    glVertex3f((float)(hull.end() - 2)->x, 0.0f, (float)(hull.end() - 2)->z);
+    glVertex3f((float)(hull.end() - 1)->x, 0.0f, (float)(hull.end() - 1)->z);
     // doGrahamScanStep(int currentPoint);
 
     glEnd();
@@ -283,10 +284,10 @@ int squaredEuclidean(Point a, Point b) {
 
 void prepareGrahamScan() {
     auto minPointIter = std::min_element(points.begin(), points.end());
-    // Swap point with the last one.
-    std::iter_swap(points.end(), minPointIter);
-    Point pivot = points.back();
-    points.pop_back();
+    // Swap point with the first one.
+    std::iter_swap(points.begin(), minPointIter);
+    Point pivot = points.front();
+    // points.pop_back();
 
     // Custom function to compare by polar angle. It's optimized so that
     // we don't actually have to compute the angle itself.
@@ -303,6 +304,7 @@ void prepareGrahamScan() {
     hull.push_back(points[0]);
     hull.push_back(points[1]);
     hull.push_back(points[2]);
+    currentPoint = 3;
 }
 
 void doGrahamScanStep(int currentPoint) {
@@ -407,8 +409,9 @@ void keyboard (unsigned char key, int x, int y) {
             break;
         case 'p':
             if(hull.size() < points.size()){
-                doGrahamScanStep(aux);
-                aux += 1;
+                doGrahamScanStep(currentPoint);
+                currentPoint += 1;
+                aux += 3;
                 display();
                 // populate();
             }
