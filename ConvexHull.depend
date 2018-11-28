@@ -1,9 +1,8 @@
 # depslib dependency file v1.0
-1542790248 source:c:\users\hgarc\github\convexhullopengl\main.cpp
+1543430833 source:c:\users\hgarc\github\convexhullopengl\main.cpp
 	<GLUT/glut.h>
 	<GL/glut.h>
 	<GL/gl.h>
-	<GL/glu.h>
 	<cmath>
 	<cstdio>
 	<vector>
@@ -15,14 +14,12 @@
 	<map>
 	<functional>
 	<queue>
-	<bitset>
 	<sstream>
 	<set>
 	<iomanip>
 	<string.h>
 	<limits.h>
 	<iterator>
-	<complex>
 	<fstream>
 	<time.h>
 
