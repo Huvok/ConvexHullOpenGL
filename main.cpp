@@ -1,15 +1,11 @@
-/*
- *
- */
-
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #else
 #include <GL/glut.h>
 #endif
 
-#include <GL/gl.h>
-#include <GL/glu.h>
+//#include <GL/gl.h>
+//#include <GL/glu.h>
 #include <cmath>
 #include <cstdio>
 #include <vector>
@@ -47,7 +43,6 @@
 enum cameraRotation {RCCW, RCW};
 enum uiParameters {REGENERATE};
 
-
 using namespace std;
 
 typedef long long ll;
@@ -61,7 +56,6 @@ float speed = 0.0f;
 float mouseX = 0.0f;
 float mouseY = 0.0f;
 float camRotZ = 0.0f;
-
 
 struct vertex {
     double x, y, z;
@@ -100,6 +94,37 @@ struct Polygon {
 vector<Point> points;
 obj sphere;
 
+vector<Point> puntosParaAlgoritmo;
+Point point(5,0,5);
+Point point2(2,0,2);
+Point point3(3,0,4);
+int aux = 0;
+
+
+void drawLines(){
+    
+    int longitudDePuntos = puntosParaAlgoritmo.size();
+    glLineWidth(2.5);
+    glBegin(GL_LINES);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    cout << longitudDePuntos << endl;
+    
+    for (int i = 0; i < longitudDePuntos-3; i++) {
+        glVertex3f((float)puntosParaAlgoritmo[i].x, 0.0f, (float)puntosParaAlgoritmo[i].z);
+        glVertex3f((float)puntosParaAlgoritmo[i+1].x, 0.0f, (float)puntosParaAlgoritmo[i+1].z);
+    }
+ 
+    glColor3f(1.0f, 0.0f, 0.0f);
+    glVertex3f((float)puntosParaAlgoritmo[aux-3].x, 0.0f, (float)puntosParaAlgoritmo[aux-3].z);
+    glVertex3f((float)puntosParaAlgoritmo[aux-2].x, 0.0f, (float)puntosParaAlgoritmo[aux-2].z);
+    glVertex3f((float)puntosParaAlgoritmo[aux-2].x, 0.0f, (float)puntosParaAlgoritmo[aux-2].z);
+    glVertex3f((float)puntosParaAlgoritmo[aux-1].x, 0.0f, (float)puntosParaAlgoritmo[aux-1].z);
+    
+    glEnd();
+    glFlush();
+}
+
 void processVertex(string line, obj *object) {
     line = line.substr(2);
     string aux = "";
@@ -135,7 +160,7 @@ void processFace(string line, rgb c, obj *object) {
         else
             aux += line[i];
     }
-
+    
     vface.vidx.pb(atoi(aux.c_str()));
     object->f.pb(vface);
     object->f[sz(object->f) - 1].color = c;
@@ -155,7 +180,7 @@ rgb processColor(string line) {
         else
             aux += line[i];
     }
-
+    
     arr[cur] = atof(aux.c_str());
     ret.r = arr[0]; ret.g = arr[1]; ret.b = arr[2];
     return ret;
@@ -166,11 +191,11 @@ string trim(string str) {
     int l = 0, r = str.size() - 1;
     while (l < r &&
            (str[l] == ' ' || str[l] == '\t'))
-            l++;
+        l++;
     while (l < r &&
            (str[r] == ' ' || str[r] == '\t'))
-            r--;
-
+        r--;
+    
     return str.substr(l, r - l + 1);
 }
 
@@ -179,19 +204,19 @@ void loadObjFiles() {
     vector<string> files;
     files.push_back("sphere.obj");
     ifstream inFile;
-
+    
     FOR(i, 0, sz(files)) {
-        string filePath = "/home/irvel/ConvexHullOpenGL/" + files[i];
+        string filePath = "/Users/hernaniruegasvillarreal/Desktop/Graficas_ProyectoFinal/" + files[i];
         obj *object;
         if (i == 0)
             object = &sphere;
-
+        
         inFile.open(filePath.c_str());
         if (!inFile) {
             cout << "Unable to open file" << endl;
             return;
         }
-
+        
         rgb c;
         while (getline(inFile, str)) {
             if (str.size() == 0)
@@ -207,7 +232,7 @@ void loadObjFiles() {
                 processFace(str, c, object);
             }
         }
-
+        
         inFile.close();
     }
 }
@@ -223,6 +248,7 @@ void generatePoints(int n, int limit) {
             if (x == points[i].x && z == points[i].z)
                 continue;
         }
+            
         points.pb(Point(x, 0, z));
     }
 }
@@ -231,23 +257,23 @@ void drawObj(obj * object) {
     FOR(i, 0, sz(object->f)) {
         if (sz(object->f[i].vidx) == 3) {
             glBegin(GL_TRIANGLES);
-                rgb c = object->f[i].color;
-                glColor3f(c.r, c.g, c.b);
-                FOR(j, 0, sz(object->f[i].vidx)) {
-                    vertex v = object->v[object->f[i].vidx[j] - 1];
-                    glVertex3f(v.x, v.y, v.z);
-                }
+            rgb c = object->f[i].color;
+            glColor3f(c.r, c.g, c.b);
+            FOR(j, 0, sz(object->f[i].vidx)) {
+                vertex v = object->v[object->f[i].vidx[j] - 1];
+                glVertex3f(v.x, v.y, v.z);
+            }
             glEnd();
         }
         else if (sz(object->f[i].vidx) == 4) {
             glBegin(GL_QUADS);
-                rgb c = object->f[i].color;
-                glColor3f(c.r, c.g, c.b);
-                FOR(j, 0, sz(object->f[i].vidx)) {
-                    vertex v = object->v[object->f[i].vidx[j] - 1];
-                    glVertex3f(v.x, v.y, v.z);
-                }
-
+            rgb c = object->f[i].color;
+            glColor3f(c.r, c.g, c.b);
+            FOR(j, 0, sz(object->f[i].vidx)) {
+                vertex v = object->v[object->f[i].vidx[j] - 1];
+                glVertex3f(v.x, v.y, v.z);
+            }
+            
             glEnd();
         }
     }
@@ -256,13 +282,13 @@ void drawObj(obj * object) {
 void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+    
     glLoadIdentity();
     // Induce a parallax effect correlated with mouse movement.
     gluLookAt(  0.0f, 100.0f + mouseX, 0.1f,
-                0.0f + camRotZ, 0.0f ,  0.0f + mouseY,
-                0.0f, 1.0f,  0.0f);
-
+              0.0f + camRotZ, 0.0f ,  0.0f + mouseY,
+              0.0f, 1.0f,  0.0f);
+    
     FOR(i, 0, sz(points)) {
         glPushMatrix();
         //cout << points[i].x << " " << points[i].y << endl;
@@ -270,22 +296,41 @@ void display(void)
         drawObj(&sphere);
         glPopMatrix();
     }
-
-    angle += 1.;
+    
+    angle += 1.0;
+    
+    if(aux > 0){
+        drawLines();
+    }
 
     glutSwapBuffers();
+    
 }
 
 void reshape(int w, int h)
 {
-   if (h == 0)
-		h = 1;
-	float ratio =  w * 1.0 / h;
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glViewport(0, 0, w, h);
-	gluPerspective(45.0f, ratio, 0.1f, 150.0f);
-	glMatrixMode(GL_MODELVIEW);
+    if (h == 0)
+        h = 1;
+    float ratio =  w * 1.0 / h;
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glViewport(0, 0, w, h);
+    gluPerspective(45.0f, ratio, 0.1f, 150.0f);
+    glMatrixMode(GL_MODELVIEW);
+}
+
+
+void populate(){
+   
+    puntosParaAlgoritmo = {};
+    aux+=3;
+    if(aux > points.size()){
+        aux = points.size();
+    }
+    for(int i=0 ; i < aux; i++){
+        puntosParaAlgoritmo.pb( points[i]);
+    }
+    display();
 }
 
 void keyboard (unsigned char key, int x, int y)
@@ -294,13 +339,18 @@ void keyboard (unsigned char key, int x, int y)
         case 27:
             exit(0);
             break;
-        // Press f key to go faster.
+            // Press f key to go faster.
         case 'f':
             speed += 2.0f;
             break;
-        // Press s key to go slower.
+            // Press s key to go slower.
         case 's':
             speed -= 2.0f;
+            break;
+        case 'p':
+            if(puntosParaAlgoritmo.size() < points.size()){
+                populate();
+            }
             break;
         default:
             break;
@@ -325,11 +375,15 @@ void processMainMenu(int option) {
     }
 }
 
+
+
+// hacer restart del convex hull
 void processParamsMenu(int option) {
     switch (option) {
         case REGENERATE:
             points.clear();
             generatePoints(50, 30);
+            
             break;
     }
 }
@@ -344,22 +398,23 @@ int main(int argc, char** argv)
     glEnable(GL_DEPTH_TEST);
     loadObjFiles();
     generatePoints(50, 30);
+    
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
     glutPassiveMotionFunc(processMouseMove);
     glutIdleFunc(display);
-
+    
     // Create UI Menus.
     int paramsMenu = glutCreateMenu(processParamsMenu);
     glutAddMenuEntry("Regenerate Points", REGENERATE);
-
+    
     int mainMenu = glutCreateMenu(processMainMenu);
     // Add options for controlling camera rotation.
     glutAddMenuEntry("Rotate View Clockwise", RCW);
     glutAddMenuEntry("Rotate View Counter-Clockwise", RCCW);
     glutAddSubMenu("Adjust Parameters", paramsMenu);
-
+    
     // Display UI menus with mouse right click.
     glutAttachMenu(GLUT_RIGHT_BUTTON);
     glutMainLoop();
