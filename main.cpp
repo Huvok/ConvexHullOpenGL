@@ -91,7 +91,7 @@ struct Polygon {
 vector<Point> points;
 Object sphere;
 
-vector<Point> puntosParaAlgoritmo;
+vector<Point> hull;
 Point point(5,0,5);
 Point point2(2,0,2);
 Point point3(3,0,4);
@@ -100,7 +100,7 @@ int aux = 0;
 
 void drawLines(){
 
-    int longitudDePuntos = puntosParaAlgoritmo.size();
+    int longitudDePuntos = hull.size();
     glLineWidth(2.5);
     glBegin(GL_LINES);
     glColor3f(1.0f, 1.0f, 1.0f);
@@ -108,15 +108,16 @@ void drawLines(){
     cout << longitudDePuntos << endl;
 
     for (int i = 0; i < longitudDePuntos-3; i++) {
-        glVertex3f((float)puntosParaAlgoritmo[i].x, 0.0f, (float)puntosParaAlgoritmo[i].z);
-        glVertex3f((float)puntosParaAlgoritmo[i+1].x, 0.0f, (float)puntosParaAlgoritmo[i+1].z);
+        glVertex3f((float)hull[i].x, 0.0f, (float)hull[i].z);
+        glVertex3f((float)hull[i+1].x, 0.0f, (float)hull[i+1].z);
     }
 
     glColor3f(1.0f, 0.0f, 0.0f);
-    glVertex3f((float)puntosParaAlgoritmo[aux-3].x, 0.0f, (float)puntosParaAlgoritmo[aux-3].z);
-    glVertex3f((float)puntosParaAlgoritmo[aux-2].x, 0.0f, (float)puntosParaAlgoritmo[aux-2].z);
-    glVertex3f((float)puntosParaAlgoritmo[aux-2].x, 0.0f, (float)puntosParaAlgoritmo[aux-2].z);
-    glVertex3f((float)puntosParaAlgoritmo[aux-1].x, 0.0f, (float)puntosParaAlgoritmo[aux-1].z);
+    glVertex3f((float)hull[aux-3].x, 0.0f, (float)hull[aux-3].z);
+    glVertex3f((float)hull[aux-2].x, 0.0f, (float)hull[aux-2].z);
+    glVertex3f((float)hull[aux-2].x, 0.0f, (float)hull[aux-2].z);
+    glVertex3f((float)hull[aux-1].x, 0.0f, (float)hull[aux-1].z);
+    // doGrahamScanStep(int currentPoint);
 
     glEnd();
     glFlush();
@@ -252,9 +253,9 @@ void generateOutputFile() {
     ofstream output;
     output.open("output.obj");
 
-    for(int i = 1; i <= puntosParaAlgoritmo.size(); i++){
-        output << "v " << puntosParaAlgoritmo[i].x << " 0.0 " << puntosParaAlgoritmo[i].z << endl;
-        output << "v " << puntosParaAlgoritmo[i+1].x << " 0.0 " << puntosParaAlgoritmo[i+1].z << endl;
+    for(int i = 1; i <= hull.size(); i++){
+        output << "v " << hull[i].x << " 0.0 " << hull[i].z << endl;
+        output << "v " << hull[i+1].x << " 0.0 " << hull[i+1].z << endl;
         output << "f " << i << " " << (i+1) << endl;
     }
 
@@ -280,7 +281,7 @@ int squaredEuclidean(Point a, Point b) {
     return dx * dx + dy * dy;
 }
 
-void grahamScan(vector<Point> points) {
+void prepareGrahamScan() {
     auto minPointIter = std::min_element(points.begin(), points.end());
     // Swap point with the last one.
     std::iter_swap(points.end(), minPointIter);
@@ -299,22 +300,20 @@ void grahamScan(vector<Point> points) {
 
     // Sort points w.r.t our selected pivot.
     std::sort(points.begin(), points.end(), polar_comparison);
+    hull.push_back(points[0]);
+    hull.push_back(points[1]);
+    hull.push_back(points[2]);
+}
 
-    stack<Point> hull;
-    hull.push(points[0]);
-    hull.push(points[1]);
-    hull.push(points[2]);
-    for (int i = 3; i < points.size(); i++) {
-        Point top = hull.top();
-        hull.pop();
-        while (determineRotation(hull.top(), top, points[i]) != CCW) {
-            top = hull.top();
-            hull.pop();
-        }
-        hull.push(top);
-        hull.push(points[i]);
+void doGrahamScanStep(int currentPoint) {
+    Point top = hull.back();
+    hull.pop_back();
+    while (determineRotation(hull.back(), top, points[currentPoint]) != CCW) {
+        top = hull.back();
+        hull.pop_back();
     }
-    // return hull;
+    hull.push_back(top);
+    hull.push_back(points[currentPoint]);
 }
 
 void drawObj(Object * object) {
@@ -383,13 +382,13 @@ void reshape(int w, int h) {
 }
 
 void populate() {
-    puntosParaAlgoritmo = {};
+    hull = {};
     aux += 3;
     if(aux > points.size()){
         aux = points.size();
     }
     for(int i=0; i < aux; i++) {
-        puntosParaAlgoritmo.push_back( points[i]);
+        hull.push_back( points[i]);
     }
     display();
 }
@@ -407,8 +406,11 @@ void keyboard (unsigned char key, int x, int y) {
             speed -= 2.0f;
             break;
         case 'p':
-            if(puntosParaAlgoritmo.size() < points.size()){
-                populate();
+            if(hull.size() < points.size()){
+                doGrahamScanStep(aux);
+                aux += 1;
+                display();
+                // populate();
             }
             break;
         default:
@@ -457,6 +459,7 @@ int main(int argc, char** argv)
     glEnable(GL_DEPTH_TEST);
     loadObjFiles();
     generatePoints(50, 30);
+    prepareGrahamScan();
 
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
