@@ -74,11 +74,11 @@ struct Point {
     Point() { x = 0, y = 0, z = 0; }
     Point(int _x, int _y, int _z) { x = _x, y = _y, z = _z; }
 
-    // Choose the smallest point along the y axis,
+    // Choose the smallest point along the z axis,
     // and use x as a tie-breaker.
     bool operator < (Point other) {
-        if (this->y != other.y) {
-            return this->y < other.y;
+        if (this->z != other.z) {
+            return this->z < other.z;
         }
         return this->x < other.x;
     }
@@ -92,33 +92,40 @@ vector<Point> points;
 Object sphere;
 
 vector<Point> hull;
-Point point(5,0,5);
-Point point2(2,0,2);
-Point point3(3,0,4);
-int aux = 0;
 int currentPoint = 0;
 
 
 void drawLines(){
-
-    int longitudDePuntos = hull.size();
     glLineWidth(2.5);
     glBegin(GL_LINES);
     glColor3f(1.0f, 1.0f, 1.0f);
 
-    // cout << longitudDePuntos << endl;
-
-    for (int i = 0; i < longitudDePuntos-3; i++) {
+    for (int i = 1; i < hull.size() - 1; i++) {
+        // Draw the current progress of the hull.
         glVertex3f((float)hull[i].x, 0.0f, (float)hull[i].z);
-        glVertex3f((float)hull[i+1].x, 0.0f, (float)hull[i+1].z);
+        glVertex3f((float)hull[i-1].x, 0.0f, (float)hull[i-1].z);
     }
+    if (currentPoint < points.size()) {
+        // Display the tentative path in red. This might be removed by the algorithm
+        // if it's a concave.
+        glColor3f(1.0f, 0.0f, 0.0f);
+        glVertex3f((float)(hull.end() - 3)->x, 0.0f, (float)(hull.end() - 3)->z);
+        glVertex3f((float)(hull.end() - 2)->x, 0.0f, (float)(hull.end() - 2)->z);
+        glVertex3f((float)(hull.end() - 2)->x, 0.0f, (float)(hull.end() - 2)->z);
+        glVertex3f((float)(hull.end() - 1)->x, 0.0f, (float)(hull.end() - 1)->z);
+    }
+    else {
+        // We skipped drawing the last edge because during the normal execution
+        // of the algorithm the edge might be wrong. Once we finish through all
+        // steps of the scan, we're now able to draw it with confidence.
+        glVertex3f((float)(hull.end() - 2)->x, 0.0f, (float)(hull.end() - 2)->z);
+        glVertex3f((float)(hull.end() - 1)->x, 0.0f, (float)(hull.end() - 1)->z);
 
-    glColor3f(1.0f, 0.0f, 0.0f);
-    glVertex3f((float)(hull.end() - 3)->x, 0.0f, (float)(hull.end() - 3)->z);
-    glVertex3f((float)(hull.end() - 2)->x, 0.0f, (float)(hull.end() - 2)->z);
-    glVertex3f((float)(hull.end() - 2)->x, 0.0f, (float)(hull.end() - 2)->z);
-    glVertex3f((float)(hull.end() - 1)->x, 0.0f, (float)(hull.end() - 1)->z);
-    // doGrahamScanStep(int currentPoint);
+        // Close gap of the drawn hull from the beginning of the hull path to
+        // last drawn point.
+        glVertex3f((float)hull.front().x, 0.0f, (float)hull.front().z);
+        glVertex3f((float)hull.back().x, 0.0f, (float)hull.back().z);
+    }
 
     glEnd();
     glFlush();
@@ -264,7 +271,7 @@ void generateOutputFile() {
 }
 
 Rotation determineRotation(Point a, Point b, Point c) {
-    int area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    int area = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
     if (area > 0) {
         return CCW;
     }
@@ -278,14 +285,37 @@ Rotation determineRotation(Point a, Point b, Point c) {
 // and avoid computing expensive square roots.
 int squaredEuclidean(Point a, Point b) {
     int dx = a.x - b.x;
-    int dy = a.y - b.y;
-    return dx * dx + dy * dy;
+    int dz = a.z - b.z;
+    return dx * dx + dz * dz;
+}
+
+void debugPoints(string msg="") {
+    if (msg != "") {
+        cout << msg << ":  ";
+    }
+    cout << "[";
+    for (auto point: points) {
+        cout << "(" << point.x << ", " << point.z << ") ";
+    }
+    cout << "]\n";
+}
+
+void debugHull(string msg="") {
+    if (msg != "") {
+        cout << msg << ":  ";
+    }
+    cout << "[";
+    for (auto point: hull) {
+        cout << "(" << point.x << ", " << point.z << ") ";
+    }
+    cout << "]\n";
 }
 
 void prepareGrahamScan() {
     auto minPointIter = std::min_element(points.begin(), points.end());
     // Swap point with the first one.
     std::iter_swap(points.begin(), minPointIter);
+
     Point pivot = points.front();
     // points.pop_back();
 
@@ -300,14 +330,15 @@ void prepareGrahamScan() {
     };
 
     // Sort points w.r.t our selected pivot.
-    std::sort(points.begin(), points.end(), polar_comparison);
+    std::sort(points.begin() + 1, points.end(), polar_comparison);
+
     hull.push_back(points[0]);
     hull.push_back(points[1]);
     hull.push_back(points[2]);
     currentPoint = 3;
 }
 
-void doGrahamScanStep(int currentPoint) {
+void doGrahamScanStep() {
     Point top = hull.back();
     hull.pop_back();
     while (determineRotation(hull.back(), top, points[currentPoint]) != CCW) {
@@ -316,6 +347,7 @@ void doGrahamScanStep(int currentPoint) {
     }
     hull.push_back(top);
     hull.push_back(points[currentPoint]);
+    currentPoint++;
 }
 
 void drawObj(Object * object) {
@@ -364,10 +396,7 @@ void display(void)
 
     angle += 1.0;
 
-    if(aux > 0){
-        drawLines();
-    }
-
+    drawLines();
     glutSwapBuffers();
 
 }
@@ -383,17 +412,6 @@ void reshape(int w, int h) {
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void populate() {
-    hull = {};
-    aux += 3;
-    if(aux > points.size()){
-        aux = points.size();
-    }
-    for(int i=0; i < aux; i++) {
-        hull.push_back( points[i]);
-    }
-    display();
-}
 
 void keyboard (unsigned char key, int x, int y) {
     switch (key) {
@@ -408,13 +426,12 @@ void keyboard (unsigned char key, int x, int y) {
             speed -= 2.0f;
             break;
         case 'p':
-            if(hull.size() < points.size()){
-                doGrahamScanStep(currentPoint);
-                currentPoint += 1;
-                aux += 3;
-                display();
-                // populate();
+            if (currentPoint < points.size()) {
+                doGrahamScanStep();
             }
+            break;
+        case 'r':
+            doGrahamScanStep();
             break;
         default:
             break;
@@ -447,7 +464,6 @@ void processParamsMenu(int option) {
         case REGENERATE:
             points.clear();
             generatePoints(50, 30);
-
             break;
     }
 }
