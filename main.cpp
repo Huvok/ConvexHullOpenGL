@@ -6,7 +6,7 @@
 
 #include <GL/gl.h>
 //#include <GL/glu.h>
-#include <cmath>
+#include <math.h>
 #include <cstdio>
 #include <vector>
 #include <iostream>
@@ -29,7 +29,7 @@ using namespace std;
 
 
 enum Rotation {CCW, CW, COLLINEAR};
-enum uiParameters {REGENERATE};
+enum uiParameters {REGENERATE, INC_POINTS, DEC_POINTS};
 
 
 typedef long long ll;
@@ -45,6 +45,7 @@ float mouseY = 0.0f;
 float camRotZ = 0.0f;
 const int windowHeight = 800;
 const int windowWidth = 800;
+int numPoints = 50;
 
 struct Vertex {
     double x, y, z;
@@ -256,7 +257,7 @@ void generatePoints(int n, int limit) {
     }
 }
 
-// Generates obj file for convex hull
+// Generates obj file for convex hull.
 void generateOutputFile() {
 
     ofstream output;
@@ -411,7 +412,6 @@ void restorePerspectiveProjection() {
 }
 
 
-
 void renderBitmapString(float x, float y, float z,
                         void *font, char *charArray) {
     char *c;
@@ -466,6 +466,8 @@ void display(void) {
 
 }
 
+
+
 void reshape(int w, int h) {
    if (h == 0)
 		h = 1;
@@ -518,13 +520,30 @@ void processMainMenu(int option) {
 }
 
 // Restart the program's state.
+void resetState() {
+    points.clear();
+    hull.clear();
+    generatePoints(numPoints, 30);
+    prepareGrahamScan();
+}
+
+// Configure program's execution parameters.
 void processParamsMenu(int option) {
     switch (option) {
         case REGENERATE:
-            points.clear();
-            hull.clear();
-            generatePoints(50, 30);
-            prepareGrahamScan();
+            resetState();
+            break;
+
+        case INC_POINTS:
+            numPoints += 40;
+            numPoints = min(numPoints, 2000);
+            resetState();
+            break;
+
+        case DEC_POINTS:
+            numPoints -= 40;
+            numPoints = max(numPoints, 6);
+            resetState();
             break;
     }
 }
@@ -557,7 +576,7 @@ int main(int argc, char** argv) {
     glEnable(GL_COLOR_MATERIAL);
 
     loadObjFiles();
-    generatePoints(50, 30);
+    generatePoints(numPoints, 30);
     prepareGrahamScan();
 
     // Register Glut callbacks.
@@ -570,6 +589,9 @@ int main(int argc, char** argv) {
     // Create UI Menus.
     int paramsMenu = glutCreateMenu(processParamsMenu);
     glutAddMenuEntry("Regenerate Points", REGENERATE);
+    glutAddMenuEntry("Increase # of Points by 40", INC_POINTS);
+    glutAddMenuEntry("Decrease # of Points by 40", DEC_POINTS);
+
 
     int mainMenu = glutCreateMenu(processMainMenu);
     // Add options for controlling camera rotation.
